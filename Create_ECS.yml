@@ -1,0 +1,28 @@
+---
+- name: Create ECS Cluster, Task Definition, and Service
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create ECS Cluster
+      ecs_cluster:
+        name: Justfortest-cluster
+        state: present
+
+    - name: Register Task Definition
+      ecs_taskdefinition:
+        family: my-task
+        container_definitions:
+          - name: Nginx-cont
+            image: nginx:latest
+            cpu: 256
+            memory: 512
+        state: present
+
+    - name: Create ECS Service
+      ecs_service:
+        name: my-service
+        cluster: Justfortest-cluster
+        task_definition: my-task
+        launch_type: EC2
+        desired_count: 1
+        state: present
