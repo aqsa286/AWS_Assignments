@@ -1,0 +1,64 @@
+---      #Add Access_key also. 
+- name: Deploy ECS Task and Service with EC2
+  hosts: localhost
+  gather_facts: False
+  vars:
+    aws_access_key: "YOUR_AWS_ACCESS_KEY"
+    aws_secret_key: "YOUR_AWS_SECRET_KEY"
+    aws_region: "us-east-1"  # Change to your desired AWS region
+    ecs_cluster_name: "my-ecs-cluster"
+    ecs_task_definition_name: "my-task-definition"
+    ecs_service_name: "my-ecs-service"
+    ecs_container_name: "my-container-name"
+    ecs_container_image: "your-docker-image-url"
+
+  tasks:
+    - name: Set AWS CLI environment variables
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_DEFAULT_REGION: "{{ aws_region }}"
+        
+    - name: Create ECS Task Definition
+      ecs_taskdefinition:
+        region: "{{ aws_region }}"
+        family: "{{ ecs_task_definition_name }}"
+        network_mode: awsvpc
+        requires_compatibilities:
+          - EC2  # Use EC2 launch type
+        execution_role_arn: "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole"
+        task_role_arn: "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskRole"
+        container_definitions:
+          - name: "{{ ecs_container_name }}"
+            image: "{{ ecs_container_image }}"
+            portMappings:
+              - containerPort: 80
+                hostPort: 80
+        register: task_definition
+
+    - name: Register ECS Task Definition
+      debug:
+        var: task_definition
+
+    - name: Create ECS Service
+      ecs_service:
+        region: "{{ aws_region }}"
+        cluster: "{{ ecs_cluster_name }}"
+        service: "{{ ecs_service_name }}"
+        task_definition: "{{ task_definition.taskDefinition.family }}:{{ task_definition.taskDefinition.revision }}"
+        launch_type: EC2  # Use EC2 launch type
+        desired_count: 1
+        deployment_configuration:
+          maximum_percent: 200
+          minimum_healthy_percent: 50
+        network_configuration:
+          awsvpc_configuration:
+            subnets:
+              - "subnet-12345678"  # Replace with your subnet IDs
+            security_groups:
+              - "sg-12345678"     # Replace with your security group IDs
+        register: service_result
+
+    - name: Register ECS Service
+      debug:
+        var: service_result
